@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Simulador de Cinética e Inhibición Enzimática</title>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      --accent-blue: #38bdf8;
+      --accent-coral: #fb7185;
+      --accent-green: #34d399;
+      --border-color: #334155;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      margin: 0 0 5px 0;
+      font-size: 1.5rem;
+      color: var(--accent-blue);
+    }
+
+    p.subtitle {
+      margin: 0 0 20px 0;
+      font-size: 0.9rem;
+      color: var(--text-sub);
+    }
+
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    .controls-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      width: 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-sub);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    select, input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent-blue);
+    }
+
+    select {
+      background: #0f172a;
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    .canvas-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      flex: 1;
+      min-width: 320px;
+      max-width: 750px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+    }
+
+    canvas {
+      width: 100%;
+      height: 280px;
+      display: block;
+    }
+
+    .legend {
+      display: flex;
+      gap: 20px;
+      font-size: 0.85rem;
+      margin-top: 10px;
+      justify-content: center;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .color-box {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+
+    .metrics-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      background: #0f172a;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      border: 1px solid var(--border-color);
+    }
+
+    .metric {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .metric-val {
+      font-weight: bold;
+      color: var(--accent-blue);
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Simulador de Cinética e Inhibición Enzimática</h1>
+  <p class="subtitle">Análisis cuantitativo de Michaelis-Menten y Lineweaver-Burk</p>
+
+  <div class="container">
+    <!-- Panel de Controles -->
+    <div class="controls-panel">
+      <div class="control-group">
+        <label for="typeSelect">Tipo de Inhibición</label>
+        <select id="typeSelect">
+          <option value="none">Sin Inhibidor (Control)</option>
+          <option value="competitive">Competitiva</option>
+          <option value="noncompetitive">No Competitiva Pura</option>
+          <option value="uncompetitive">Acompetitiva</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Vmáx inicial: <span id="vmaxVal">100</span></label>
+        <input type="range" id="vmaxInput" min="20" max="200" value="100" step="5">
+      </div>
+
+      <div class="control-group">
+        <label>Km inicial (mM): <span id="kmVal">2.0</span></label>
+        <input type="range" id="kmInput" min="0.5" max="10" value="2.0" step="0.1">
+      </div>
+
+      <div class="control-group">
+        <label>Concentración de Inhibidor [I]: <span id="iVal">1.0</span></label>
+        <input type="range" id="iInput" min="0" max="5" value="1.0" step="0.1">
+      </div>
+
+      <div class="control-group">
+        <label>Constante de Inhibición Ki: <span id="kiVal">1.0</span></label>
+        <input type="range" id="kiInput" min="0.2" max="5" value="1.0" step="0.1">
+      </div>
+
+      <div class="metrics-panel">
+        <div class="metric">
+          <span>Km aparente:</span>
+          <span class="metric-val" id="kmAppDisp">2.00 mM</span>
+        </div>
+        <div class="metric">
+          <span>Vmáx aparente:</span>
+          <span class="metric-val" id="vmaxAppDisp">100.0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gráficos Canvas -->
+    <div class="canvas-container">
+      <div class="card">
+        <canvas id="mmCanvas"></canvas>
+        <div class="legend">
+          <div class="legend-item">
+            <div class="color-box" style="background: var(--accent-blue)"></div>
+            Control (Sin Inhibidor)
+          </div>
+          <div class="legend-item" id="inhLegend" style="display: none;">
+            <div class="color-box" style="background: var(--accent-coral)"></div>
+            Con Inhibidor
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <canvas id="lbCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Referencias al DOM
+    const typeSelect = document.getElementById('typeSelect');
+    const vmaxInput = document.getElementById('vmaxInput');
+    const kmInput = document.getElementById('kmInput');
+    const iInput = document.getElementById('iInput');
+    const kiInput = document.getElementById('kiInput');
+
+    const vmaxVal = document.getElementById('vmaxVal');
+    const kmVal = document.getElementById('kmVal');
+    const iVal = document.getElementById('iVal');
+    const kiVal = document.getElementById('kiVal');
+    const kmAppDisp = document.getElementById('kmAppDisp');
+    const vmaxAppDisp = document.getElementById('vmaxAppDisp');
+    const inhLegend = document.getElementById('inhLegend');
+
+    const mmCanvas = document.getElementById('mmCanvas');
+    const lbCanvas = document.getElementById('lbCanvas');
+    const ctxMM = mmCanvas.getContext('2d');
+    const ctxLB = lbCanvas.getContext('2d');
+
+    // Ajuste de DPI/Resolución de Canvas
+    function setupCanvas(canvas) {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * window.devicePixelRatio;
+      canvas.height = rect.height * window.devicePixelRatio;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      return { width: rect.width, height: rect.height };
+    }
+
+    // Cálculo Cinético Fundamental
+    function calculateKinematics() {
+      const Vmax = parseFloat(vmaxInput.value);
+      const Km = parseFloat(kmInput.value);
+      const I = parseFloat(iInput.value);
+      const Ki = parseFloat(kiInput.value);
+      const type = typeSelect.value;
+
+      let KmApp = Km;
+      let VmaxApp = Vmax;
+
+      const alpha = 1 + (I / Ki);
+
+      if (type === 'competitive') {
+        KmApp = Km * alpha;
+      } else if (type === 'noncompetitive') {
+        VmaxApp = Vmax / alpha;
+      } else if (type === 'uncompetitive') {
+        KmApp = Km / alpha;
+        VmaxApp = Vmax / alpha;
+      }
+
+      return { Vmax, Km, I, Ki, type, KmApp, VmaxApp, alpha };
+    }
+
+    // Renderizar Gráfica de Michaelis-Menten
+    function drawMichaelisMenten(params, dim) {
+      const { width, height } = dim;
+      ctxMM.clearRect(0, 0, width, height);
+
+      const padding = { top: 20, right: 30, bottom: 40, left: 50 };
+      const graphW = width - padding.left - padding.right;
+      const graphH = height - padding.top - padding.bottom;
+
+      const maxS = 20; // mM
+      const maxV = 220; // Unidades de velocidad
+
+      // Ejes
+      ctxMM.strokeStyle = '#334155';
+      ctxMM.lineWidth = 1;
+      ctxMM.beginPath();
+      ctxMM.moveTo(padding.left, padding.top);
+      ctxMM.lineTo(padding.left, height - padding.bottom);
+      ctxMM.lineTo(width - padding.right, height - padding.bottom);
+      ctxMM.stroke();
+
+      // Etiquetas Ejes
+      ctxMM.fillStyle = '#94a3b8';
+      ctxMM.font = '11px sans-serif';
+      ctxMM.fillText('[S] Concentración de Sustrato (mM)', width / 2, height - 10);
+
+      ctxMM.save();
+      ctxMM.translate(15, height / 2);
+      ctxMM.rotate(-Math.PI / 2);
+      ctxMM.fillText('Velocidad Inicial V₀', 0, 0);
+      ctxMM.restore();
+
+      // Mapeo de coordenadas
+      const mapX = (S) => padding.left + (S / maxS) * graphW;
+      const mapY = (V) => height - padding.bottom - (V / maxV) * graphH;
+
+      // Función Curva
+      const plotCurve = (KmVal, VmaxVal, color) => {
+        ctxMM.beginPath();
+        ctxMM.strokeStyle = color;
+        ctxMM.lineWidth = 2.5;
+
+        for (let S = 0; S <= maxS; S += 0.1) {
+          const V = (VmaxVal * S) / (KmVal + S);
+          const x = mapX(S);
+          const y = mapY(V);
+          if (S === 0) ctxMM.moveTo(x, y);
+          else ctxMM.lineTo(x, y);
+        }
+        ctxMM.stroke();
+      };
+
+      // Curva Control
+      plotCurve(params.Km, params.Vmax, '#38bdf8');
+
+      // Curva Con Inhibidor
+      if (params.type !== 'none' && params.I > 0) {
+        plotCurve(params.KmApp, params.VmaxApp, '#fb7185');
+      }
+
+      // Título
+      ctxMM.fillStyle = '#f8fafc';
+      ctxMM.font = 'bold 12px sans-serif';
+      ctxMM.fillText('Gráfica de Michaelis-Menten (V₀ vs [S])', padding.left, 15);
+    }
+
+    // Renderizar Gráfica de Lineweaver-Burk
+    function drawLineweaverBurk(params, dim) {
+      const { width, height } = dim;
+      ctxLB.clearRect(0, 0, width, height);
+
+      const padding = { top: 20, right: 30, bottom: 40, left: 60 };
+      const graphW = width - padding.left - padding.right;
+      const graphH = height - padding.top - padding.bottom;
+
+      // Rangos de Recíprocos
+      const minX = -0.8; // 1/[S] negativo para intercepto X
+      const maxX = 1.0;
+      const minY = 0;
+      const maxY = 0.08; // 1/V₀
+
+      const mapX = (invS) => padding.left + ((invS - minX) / (maxX - minX)) * graphW;
+      const mapY = (invV) => height - padding.bottom - ((invV - minY) / (maxY - minY)) * graphH;
+
+      const originX = mapX(0);
+
+      // Ejes
+      ctxLB.strokeStyle = '#334155';
+      ctxLB.lineWidth = 1;
+      ctxLB.beginPath();
+      // Eje Y (en 1/[S] = 0)
+      ctxLB.moveTo(originX, padding.top);
+      ctxLB.lineTo(originX, height - padding.bottom);
+      // Eje X
+      ctxLB.moveTo(padding.left, height - padding.bottom);
+      ctxLB.lineTo(width - padding.right, height - padding.bottom);
+      ctxLB.stroke();
+
+      // Etiquetas
+      ctxLB.fillStyle = '#94a3b8';
+      ctxLB.font = '11px sans-serif';
+      ctxLB.fillText('1/[S] (mM⁻¹)', width - padding.right - 50, height - 10);
+
+      ctxLB.save();
+      ctxLB.translate(20, height / 2);
+      ctxLB.rotate(-Math.PI / 2);
+      ctxLB.fillText('1/V₀ (min/µmol)', 0, 0);
+      ctxLB.restore();
+
+      // Función Recta Linealizada
+      const plotLine = (KmVal, VmaxVal, color) => {
+        ctxLB.beginPath();
+        ctxLB.strokeStyle = color;
+        ctxLB.lineWidth = 2.5;
+
+        // Intercepto X: -1/Km, Intercepto Y: 1/Vmax
+        const startX = -1 / KmVal;
+        const endX = maxX;
+
+        const startY = 0; // en -1/Km, 1/V0 = 0
+        const endY = (KmVal / VmaxVal) * endX + (1 / VmaxVal);
+
+        ctxLB.moveTo(mapX(startX), mapY(startY));
+        ctxLB.lineTo(mapX(endX), mapY(endY));
+        ctxLB.stroke();
+
+        // Puntos de Intersección
+        ctxLB.fillStyle = color;
+        ctxLB.beginPath();
+        ctxLB.arc(mapX(startX), mapY(0), 4, 0, Math.PI * 2);
+        ctxLB.arc(mapX(0), mapY(1 / VmaxVal), 4, 0, Math.PI * 2);
+        ctxLB.fill();
+      };
+
+      // Control
+      plotLine(params.Km, params.Vmax, '#38bdf8');
+
+      // Inhibidor
+      if (params.type !== 'none' && params.I > 0) {
+        plotLine(params.KmApp, params.VmaxApp, '#fb7185');
+      }
+
+      // Título
+      ctxLB.fillStyle = '#f8fafc';
+      ctxLB.font = 'bold 12px sans-serif';
+      ctxLB.fillText('Gráfica de Lineweaver-Burk (1/V₀ vs 1/[S])', padding.left, 15);
+    }
+
+    // Actualización global
+    function update() {
+      const params = calculateKinematics();
+
+      // UI Text
+      vmaxVal.textContent = params.Vmax;
+      kmVal.textContent = params.Km.toFixed(1);
+      iVal.textContent = params.I.toFixed(1);
+      kiVal.textContent = params.Ki.toFixed(1);
+
+      kmAppDisp.textContent = `${params.KmApp.toFixed(2)} mM`;
+      vmaxAppDisp.textContent = params.VmaxApp.toFixed(1);
+
+      if (params.type !== 'none' && params.I > 0) {
+        inhLegend.style.display = 'flex';
+      } else {
+        inhLegend.style.display = 'none';
+      }
+
+      const dimMM = setupCanvas(mmCanvas);
+      const dimLB = setupCanvas(lbCanvas);
+
+      drawMichaelisMenten(params, dimMM);
+      drawLineweaverBurk(params, dimLB);
+    }
+
+    // Event Listeners
+    [typeSelect, vmaxInput, kmInput, iInput, kiInput].forEach(el => {
+      el.addEventListener('input', update);
+    });
+
+    window.addEventListener('resize', update);
+
+    // Inicialización
+    update();
+  </script>
+</body>
+</html>
